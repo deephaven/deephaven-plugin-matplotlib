@@ -1,13 +1,8 @@
 from io import BytesIO
 from matplotlib.figure import Figure
 from deephaven.plugin.object import Exporter, ObjectType
-from importlib import resources
-import matplotlib.pyplot as plt
 
 NAME = "matplotlib.figure.Figure"
-
-with resources.path(__package__, 'deephaven.mplstyle') as p:
-    plt.style.use(['dark_background',p])
 
 class FigureType(ObjectType):
     @property
@@ -19,5 +14,5 @@ class FigureType(ObjectType):
 
     def to_bytes(self, exporter: Exporter, figure: Figure) -> bytes:
         buf = BytesIO()
-        figure.savefig(buf, format='PNG')
+        figure.savefig(buf, format='PNG', dpi=144)
         return buf.getvalue()
