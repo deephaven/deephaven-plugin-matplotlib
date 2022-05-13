@@ -2,7 +2,24 @@ from deephaven.plugin import Registration
 from importlib import resources
 import matplotlib.pyplot as plt
 
-__version__ = "0.0.1.dev6"
+__version__ = "0.0.1.dev7"
+
+def table_plot(table, ax, cols):
+    """Plot data from a specified table to an axis"""
+    # Start with empty data
+    line, = ax.plot([], [])
+    def on_table_update(update):
+        data = []
+        for col in cols:
+            data.append(table.j_table.getColumn(col).getDirect())
+        line.set_data(data)
+        ax.relim()
+        ax.autoscale_view(True, True, True)
+
+    from deephaven_legacy import listen
+    listen(table.j_table, on_table_update)
+    # Update right away
+    on_table_update({})
 
 def init_theme():
     # Set the Deephaven style globally.
