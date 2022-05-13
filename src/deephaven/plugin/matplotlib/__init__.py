@@ -16,8 +16,8 @@ def table_plot(table, ax, cols):
         ax.relim()
         ax.autoscale_view(True, True, True)
 
-    from deephaven_legacy import listen
-    listen(table.j_table, on_table_update)
+    from deephaven.table_listener import listen
+    listen(table, on_table_update)
     # Update right away
     on_table_update({})
 
