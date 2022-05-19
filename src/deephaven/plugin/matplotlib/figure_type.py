@@ -1,9 +1,9 @@
 from io import BytesIO
-from weakref import WeakKeyDictionary
+from weakref import WeakKeyDictionary, WeakSet
 from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 from deephaven.plugin.object import Exporter, ObjectType
 from threading import Timer
-
 
 # Name of the matplotlib figure object that was export
 NAME = "matplotlib.figure.Figure"
@@ -13,6 +13,9 @@ DPI = 144
 
 # Dictionary to store the input tables created for each figure
 figure_tables = WeakKeyDictionary()
+
+# Track the currently drawing figure, otherwise the stale_callback gets called when we call `savefig`
+drawing_figures = WeakSet()
 
 def debounce(wait):
     """Postpone a functions execution until after some time has elapsed
@@ -43,6 +46,7 @@ def debounce(wait):
 # width: The width of panel displaying the figure
 # height: The height of the panel displaying the figure
 def make_input_table(figure):
+    print("make_input_table...")
     from deephaven import new_table
     from deephaven.column import string_col, int_col
     import jpy
@@ -68,19 +72,18 @@ def make_input_table(figure):
         # TODO: Add listener to input table to update figure width/height
 
         @debounce(0.2)
-        def handle_figure_update(self, value):
-            if not value:
-                # value is True if it's stale, false otherwise
-                # Only send a revision update if it's true
-                print("handle_figure_update was not stale")
-                return
+        def update_revision():
             nonlocal revision
             revision = revision + 1
-            # print("handle_figure_update " + str(value) + " self " + str(self) + " fig.stale=" + str(self.stale) + " revision " + str(revision) + " table " + str(input_table))
             input_table.getAttribute("InputTable").add(new_table([string_col('key', ['revision']), int_col('value', [revision])]).j_table)
-            # print("revision updated")
-            self.stale = False
-            # print("No longer stale" + str(self.stale))
+            print("revision updated: " + str(revision))
+
+
+        def handle_figure_update(self, value):
+            # Check if we're already drawing this figure, and the stale callback was triggered because of our call to savefig
+            if self in drawing_figures:
+                return
+            update_revision()
 
         figure.stale_callback = handle_figure_update
 
@@ -108,8 +111,10 @@ class FigureType(ObjectType):
         exporter.reference(input_table)
         exporter.reference(liveness_scope)
         buf = BytesIO()
-        figure.savefig(buf, format='PNG', dpi=DPI)
 
-        # Eliminate the staleness by drawing the figure
-        figure.canvas.draw_idle()
+        # We need to keep track of the figure while drawing it, or the savefig call triggers our stale callback
+        drawing_figures.add(figure)
+        figure.savefig(buf, format='PNG', dpi=DPI)
+        drawing_figures.remove(figure)
+
         return buf.getvalue()
