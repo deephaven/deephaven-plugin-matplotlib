@@ -4,24 +4,7 @@ import matplotlib.pyplot as plt
 
 __version__ = "0.0.1.dev7"
 
-def table_plot(table, ax, cols):
-    """Plot data from a specified table to an axis"""
-    # Start with empty data
-    line, = ax.plot([], [])
-    def on_table_update(update):
-        data = []
-        for col in cols:
-            data.append(table.j_table.getColumn(col).getDirect())
-        line.set_data(data)
-        ax.relim()
-        ax.autoscale_view(True, True, True)
-
-    from deephaven.table_listener import listen
-    listen(table, on_table_update)
-    # Update right away
-    on_table_update({})
-
-def init_theme():
+def _init_theme():
     # Set the Deephaven style globally.
     # We use the savefig function to export the Figure, and that uses the Figure's properties for colours rather than temporary styling.
     # The Figure's properties are set on creation time of the Figure, rather than when the Figure is exported
@@ -33,6 +16,6 @@ def init_theme():
 class MatplotlibRegistration(Registration):
     @classmethod
     def register_into(cls, callback: Registration.Callback) -> None:
-        init_theme()
+        _init_theme()
         from . import figure_type
         callback.register(figure_type.FigureType)

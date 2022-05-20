@@ -12,10 +12,10 @@ NAME = "matplotlib.figure.Figure"
 DPI = 144
 
 # Dictionary to store the input tables created for each figure
-figure_tables = WeakKeyDictionary()
+_figure_tables = WeakKeyDictionary()
 
-# Track the currently drawing figure, otherwise the stale_callback gets called when we call `savefig`
-drawing_figures = WeakSet()
+# Track the currently drawing figures, otherwise the stale_callback gets called when we call `savefig`
+_exporting_figures = WeakSet()
 
 def debounce(wait):
     """Postpone a functions execution until after some time has elapsed
@@ -45,8 +45,7 @@ def debounce(wait):
 # revision: Increases whenever the figure 'ticks'
 # width: The width of panel displaying the figure
 # height: The height of the panel displaying the figure
-def make_input_table(figure):
-    print("make_input_table...")
+def _make_input_table(figure):
     from deephaven import new_table
     from deephaven.column import string_col, int_col
     import jpy
@@ -76,12 +75,10 @@ def make_input_table(figure):
             nonlocal revision
             revision = revision + 1
             input_table.getAttribute("InputTable").add(new_table([string_col('key', ['revision']), int_col('value', [revision])]).j_table)
-            print("revision updated: " + str(revision))
-
 
         def handle_figure_update(self, value):
             # Check if we're already drawing this figure, and the stale callback was triggered because of our call to savefig
-            if self in drawing_figures:
+            if self in _exporting_figures:
                 return
             update_revision()
 
@@ -93,10 +90,20 @@ def make_input_table(figure):
 
     return input_table, liveness_scope
 
-def get_input_table(figure):
-    if not figure in figure_tables:
-        figure_tables[figure] = make_input_table(figure)
-    return figure_tables[figure]
+def _get_input_table(figure):
+    if not figure in _figure_tables:
+        _figure_tables[figure] = _make_input_table(figure)
+    return _figure_tables[figure]
+
+def _export_figure(figure):
+    buf = BytesIO()
+
+    # We need to keep track of the figure while drawing it, or the savefig call triggers our stale callback
+    _exporting_figures.add(figure)
+    figure.savefig(buf, format='PNG', dpi=DPI)
+    _exporting_figures.remove(figure)
+
+    return buf.getvalue()
 
 class FigureType(ObjectType):
     @property
@@ -107,14 +114,7 @@ class FigureType(ObjectType):
         return isinstance(object, Figure)
 
     def to_bytes(self, exporter: Exporter, figure: Figure) -> bytes:
-        input_table, liveness_scope = get_input_table(figure)
+        input_table, liveness_scope = _get_input_table(figure)
         exporter.reference(input_table)
         exporter.reference(liveness_scope)
-        buf = BytesIO()
-
-        # We need to keep track of the figure while drawing it, or the savefig call triggers our stale callback
-        drawing_figures.add(figure)
-        figure.savefig(buf, format='PNG', dpi=DPI)
-        drawing_figures.remove(figure)
-
-        return buf.getvalue()
+        return _export_figure(figure)
