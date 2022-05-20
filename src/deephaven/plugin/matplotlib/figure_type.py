@@ -70,7 +70,7 @@ def _make_input_table(figure):
 
         # TODO: Add listener to input table to update figure width/height
 
-        @debounce(0.2)
+        @debounce(0.1)
         def update_revision():
             nonlocal revision
             revision = revision + 1
