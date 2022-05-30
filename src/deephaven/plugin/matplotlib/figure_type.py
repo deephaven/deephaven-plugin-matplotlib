@@ -1,7 +1,6 @@
 from io import BytesIO
 from weakref import WeakKeyDictionary, WeakSet
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
 from deephaven.plugin.object import Exporter, ObjectType
 from threading import Timer
 
@@ -98,10 +97,12 @@ def _get_input_table(figure):
 def _export_figure(figure):
     buf = BytesIO()
 
-    # We need to keep track of the figure while drawing it, or the savefig call triggers our stale callback
-    _exporting_figures.add(figure)
-    figure.savefig(buf, format='PNG', dpi=DPI)
-    _exporting_figures.remove(figure)
+    try:
+        # We need to keep track of the figure while drawing it, or the savefig call triggers our stale callback
+        _exporting_figures.add(figure)
+        figure.savefig(buf, format='PNG', dpi=DPI)
+    finally:
+        _exporting_figures.remove(figure)
 
     return buf.getvalue()
 
