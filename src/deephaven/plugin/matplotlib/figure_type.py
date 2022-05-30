@@ -50,44 +50,32 @@ def _make_input_table(figure):
     import jpy
     from deephaven.table_listener import _do_locked
 
-    # We need to get the liveness scope so we can run table operations
-    LivenessScope = jpy.get_type('io.deephaven.engine.liveness.LivenessScope')
-    LivenessScopeStack = jpy.get_type('io.deephaven.engine.liveness.LivenessScopeStack')
-    liveness_scope = LivenessScope(True)
-    LivenessScopeStack.push(liveness_scope)
-
     input_table = None
+    revision = 0
 
-    def init_table():
-        nonlocal input_table
-        revision = 0
-        t = new_table([
-            string_col("key", ["revision", "width", "height"]),
-            int_col("value", [revision, 640, 480])
-        ])
-        input_table = jpy.get_type('io.deephaven.engine.table.impl.util.KeyedArrayBackedMutableTable').make(t.j_table, 'key')
+    t = new_table([
+        string_col("key", ["revision", "width", "height"]),
+        int_col("value", [revision, 640, 480])
+    ])
+    input_table = jpy.get_type('io.deephaven.engine.table.impl.util.KeyedArrayBackedMutableTable').make(t.j_table, 'key')
 
-        # TODO: Add listener to input table to update figure width/height
+    # TODO: Add listener to input table to update figure width/height
 
-        @debounce(0.1)
-        def update_revision():
-            nonlocal revision
-            revision = revision + 1
-            input_table.getAttribute("InputTable").add(new_table([string_col('key', ['revision']), int_col('value', [revision])]).j_table)
+    @debounce(0.1)
+    def update_revision():
+        nonlocal revision
+        revision = revision + 1
+        input_table.getAttribute("InputTable").add(new_table([string_col('key', ['revision']), int_col('value', [revision])]).j_table)
 
-        def handle_figure_update(self, value):
-            # Check if we're already drawing this figure, and the stale callback was triggered because of our call to savefig
-            if self in _exporting_figures:
-                return
-            update_revision()
+    def handle_figure_update(self, value):
+        # Check if we're already drawing this figure, and the stale callback was triggered because of our call to savefig
+        if self in _exporting_figures:
+            return
+        _do_locked(update_revision)
 
-        figure.stale_callback = handle_figure_update
+    figure.stale_callback = handle_figure_update
 
-    _do_locked(init_table)
-
-    LivenessScopeStack.pop(liveness_scope)
-
-    return input_table, liveness_scope
+    return input_table
 
 def _get_input_table(figure):
     if not figure in _figure_tables:
@@ -115,7 +103,6 @@ class FigureType(ObjectType):
         return isinstance(object, Figure)
 
     def to_bytes(self, exporter: Exporter, figure: Figure) -> bytes:
-        input_table, liveness_scope = _get_input_table(figure)
+        input_table = _get_input_table(figure)
         exporter.reference(input_table)
-        exporter.reference(liveness_scope)
         return _export_figure(figure)
