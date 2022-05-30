@@ -105,11 +105,6 @@ def update_fig(data, update):
 ani = TableAnimation(fig, tt, update_fig)
 ```
 
-### TableAnimation
-
-You can also connect a 
-
-
 ## Build
 
 To create your build / development environment:
