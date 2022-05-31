@@ -48,7 +48,6 @@ def _make_input_table(figure):
     from deephaven import new_table
     from deephaven.column import string_col, int_col
     import jpy
-    from deephaven.table_listener import _do_locked
 
     input_table = None
     revision = 0
@@ -71,7 +70,7 @@ def _make_input_table(figure):
         # Check if we're already drawing this figure, and the stale callback was triggered because of our call to savefig
         if self in _exporting_figures:
             return
-        _do_locked(update_revision)
+        update_revision()
 
     figure.stale_callback = handle_figure_update
 
