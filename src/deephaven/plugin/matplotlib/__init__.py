@@ -1,3 +1,4 @@
+from deephaven import numpy as dhnp
 from deephaven.plugin import Registration
 from deephaven.table_listener import listen
 from importlib import resources
@@ -156,5 +157,5 @@ class TableAnimation(Animation):
     def _draw_frame(self, framedata):
         data = {}
         for column in self._columns:
-            data[column] = self._table.j_table.getColumn(column).getDirect()
+            data[column] = dhnp.to_numpy(self._table, [column])
         self._func(data, self._last_update, *self._args)
