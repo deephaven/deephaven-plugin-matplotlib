@@ -129,7 +129,7 @@ class TableAnimation(Animation):
             self._args = ()
         self._func = func
         self._table = table
-        if not columns:
+        if columns is None:
             self._columns = [column.name for column in table.columns]
         else:
             self._columns = columns
