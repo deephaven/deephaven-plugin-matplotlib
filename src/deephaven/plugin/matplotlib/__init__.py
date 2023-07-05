@@ -5,7 +5,6 @@ from importlib import resources
 import matplotlib.pyplot as plt
 from matplotlib.animation import Animation
 import itertools
-from numpy import ndarray
 
 __version__ = "0.1.1"
 
@@ -158,6 +157,5 @@ class TableAnimation(Animation):
     def _draw_frame(self, framedata):
         data = {}
         for column in self._columns:
-            data[column] = ndarray.flatten(dhnp.to_numpy(self._table, [column]))
-
+            data[column] = dhnp.to_numpy(self._table, [column])
         self._func(data, self._last_update, *self._args)
