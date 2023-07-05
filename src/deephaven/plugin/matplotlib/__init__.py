@@ -5,12 +5,9 @@ from importlib import resources
 import matplotlib.pyplot as plt
 from matplotlib.animation import Animation
 import itertools
-import jpy
 from numpy import ndarray
 
 __version__ = "0.1.1"
-
-_JDataAccessHelpers = jpy.get_type("io.deephaven.engine.table.impl.DataAccessHelpers")
 
 def _init_theme():
     # Set the Deephaven style globally.
@@ -135,10 +132,8 @@ class TableAnimation(Animation):
         self._table = table
         if columns is None:
             self._columns = [column.name for column in table.columns]
-            self._column_defs = table.columns
         else:
             self._columns = columns
-            self._column_defs = [[column_def for column_def in table.columns if x.name == column] for column in columns]
         self._last_update = None
         event_source = TableEventSource(table)
         super().__init__(fig, event_source, **kwargs)
@@ -162,8 +157,7 @@ class TableAnimation(Animation):
 
     def _draw_frame(self, framedata):
         data = {}
-        for i, column in enumerate(self._columns):
-            data_col = _JDataAccessHelpers.getColumn(self._table.j_table, column)
-            data[column] = dhnp.column_to_numpy_array(self._column_defs[i], data_col.getDirect())
+        for column in self._columns:
+            data[column] = ndarray.flatten(dhnp.to_numpy(self._table, [column]))
 
         self._func(data, self._last_update, *self._args)
