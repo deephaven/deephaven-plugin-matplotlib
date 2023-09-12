@@ -1,4 +1,6 @@
-# Deephaven Plugin for matplotlib
+# DEPRECATED
+
+Please use the monorepo at https://github.com/deephaven/deephaven-plugins
 
 The Deephaven Plugin for matplotlib. Allows for opening matplotlib plots in a Deephaven environment. Any matplotlib plot
 should be viewable by default. For example:
